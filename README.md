@@ -135,7 +135,13 @@ Solo avisa mientras el PC esté encendido.
 **Sin PC, con GitHub Actions:** sube esta carpeta a un repositorio de GitHub
 y añade `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` en *Settings → Secrets and
 variables → Actions*. El workflow de `.github/workflows/kite-alert.yml` hace
-la consulta cada 3 horas y guarda `state.json` en el propio repositorio.
+la consulta cada 3 horas, guarda `state.json` en el propio repositorio y
+publica el parte como página web con GitHub Pages:
+
+https://gabriel99-tech.github.io/kite-alert/
+
+La página muestra las sesiones de cada spot y, haya sesión o no, la hora de
+más viento prevista cada día. En local se genera en `site/index.html`.
 
 ## Aviso
 
