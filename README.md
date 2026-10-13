@@ -20,7 +20,8 @@ Spots configurados:
   20:00, con viento dentro del rango de tus cometas, dirección válida para el
   spot, sin lluvia y sin rachas excesivas.
 - De cada sesión da el **viento constante** (media, mínimo y máximo), la
-  **racha máxima**, la dirección y la **cometa recomendada**.
+  **racha máxima**, la **sensación** (media entre el constante y la racha de
+  cada hora), la dirección y la **cometa recomendada**.
 - Solo manda Telegram cuando hay novedades: aparece una sesión, cambia la
   cometa recomendada o una sesión prevista deja de salir.
 
@@ -54,7 +55,7 @@ pip install -r requirements.txt
 ```bash
 python kite_alert.py --once           # consulta una vez
 python kite_alert.py --once --force   # envía el parte aunque no haya novedades
-python kite_alert.py                  # se queda consultando cada 3 horas
+python kite_alert.py                  # se queda consultando cada 30 minutos
 ```
 
 El parte siempre se muestra por pantalla. Lo último avisado se guarda en
@@ -124,10 +125,10 @@ Las coordenadas son aproximadas: muévelas al punto exacto donde navegas.
 ## Dejarlo funcionando solo
 
 **En Windows:** el Programador de tareas puede lanzar `run_kite_alert.bat`
-cada 3 horas:
+cada 30 minutos:
 
 ```text
-schtasks /create /tn "Kite Alert" /sc hourly /mo 3 /tr "C:\ruta\a\run_kite_alert.bat"
+schtasks /create /tn "Kite Alert" /sc minute /mo 30 /tr "C:\ruta\a\run_kite_alert.bat"
 ```
 
 Solo avisa mientras el PC esté encendido.
@@ -135,7 +136,7 @@ Solo avisa mientras el PC esté encendido.
 **Sin PC, con GitHub Actions:** sube esta carpeta a un repositorio de GitHub
 y añade `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` en *Settings → Secrets and
 variables → Actions*. El workflow de `.github/workflows/kite-alert.yml` hace
-la consulta cada 3 horas, guarda `state.json` en el propio repositorio y
+la consulta cada 30 minutos, guarda `state.json` en el propio repositorio y
 publica el parte como página web con GitHub Pages:
 
 https://gabriel99-tech.github.io/kite-alert/

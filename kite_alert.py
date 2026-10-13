@@ -21,7 +21,7 @@ STATE_FILE = os.path.join(BASE_DIR, "state.json")
 # Página web con el parte, para verlo desde el móvil.
 SITE_FILE = os.path.join(BASE_DIR, "site", "index.html")
 
-CHECK_EVERY_MINUTES = 180
+CHECK_EVERY_MINUTES = 30
 FORECAST_DAYS = 3
 
 # Modelos de Open-Meteo, por orden de preferencia. Si el primero no cubre
@@ -249,6 +249,11 @@ def choose_kite(wind, gust):
     return name, note, gust_ok and ideal
 
 
+def feel(row):
+    """Sensación de viento navegando: media entre el constante y la racha."""
+    return (row["wind"] + row["gust"]) / 2
+
+
 def summarize(group):
     winds = [r["wind"] for r in group]
     directions = [compass(r["degrees"]) for r in group]
@@ -264,6 +269,7 @@ def summarize(group):
         "wind_min": min(winds),
         "wind_max": max(winds),
         "gust": gust,
+        "feel": sum(feel(r) for r in group) / len(group),
         "direction": max(set(directions), key=directions.count),
         "kite": kite,
         "note": note,
@@ -286,7 +292,8 @@ def format_spot(name, sessions):
             f"{icon} {day} · {s['start']:%H:%M}–{s['end']:%H:%M}\n"
             f"   💨 Constante {s['wind']:.0f} kt "
             f"({s['wind_min']:.0f}–{s['wind_max']:.0f}) · "
-            f"Rachas {s['gust']:.0f} kt · 🧭 {s['direction']}\n"
+            f"Rachas {s['gust']:.0f} kt\n"
+            f"   🌬️ Sensación {s['feel']:.0f} kt · 🧭 {s['direction']}\n"
             f"   🪁 {kite}"
         )
 
@@ -317,21 +324,25 @@ PAGE = """<!doctype html>
 <style>
 :root {{ color-scheme: light dark; --bg: #f3f5f7; --card: #fff;
   --text: #17212b; --muted: #627080; --line: #dde2e7;
-  --good: #1a8a4a; --fair: #b57a00; }}
+  --good: #1a8a4a; --fair: #b57a00; --bad: #c8322b;
+  --good-bg: #e6f5ec; --bad-bg: #fbe9e7; }}
 @media (prefers-color-scheme: dark) {{
   :root {{ --bg: #10161c; --card: #1a232c; --text: #e8edf2;
-    --muted: #93a1b0; --line: #2b3742; --good: #4fd08a; --fair: #f0b840; }} }}
+    --muted: #93a1b0; --line: #2b3742; --good: #4fd08a; --fair: #f0b840;
+    --bad: #ff7b72; --good-bg: #16302a; --bad-bg: #33201f; }} }}
 body {{ margin: 0; padding: 16px; background: var(--bg); color: var(--text);
   font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }}
 main {{ max-width: 560px; margin: 0 auto; }}
 h1 {{ font-size: 1.5rem; margin: 8px 0 0; }}
 .updated {{ color: var(--muted); font-size: .85rem; margin: 2px 0 16px; }}
 .spot {{ background: var(--card); border-radius: 14px; padding: 14px 16px;
-  margin-bottom: 12px; }}
+  margin-bottom: 12px; border-left: 6px solid var(--line); }}
+.spot.on {{ background: var(--good-bg); border-color: var(--good); }}
+.spot.off {{ background: var(--bad-bg); border-color: var(--bad); }}
 h2 {{ font-size: 1.1rem; margin: 0 0 8px; }}
-.session {{ border-left: 4px solid var(--fair); padding: 2px 0 2px 12px;
-  margin-bottom: 10px; }}
-.session.good {{ border-color: var(--good); }}
+.on h2 {{ color: var(--good); }}
+.off h2, .off .none {{ color: var(--bad); }}
+.session {{ margin-bottom: 10px; }}
 .when {{ font-weight: 600; }}
 .wind {{ font-variant-numeric: tabular-nums; }}
 .kite {{ font-weight: 600; color: var(--fair); }}
@@ -356,6 +367,8 @@ td + td {{ text-align: right; }}
 
 
 def spot_html(name, sessions, peaks, error):
+    # Verde si hay sesión, rojo si no; sin color si falló la consulta.
+    status = "error" if error else "on" if sessions else "off"
     parts = [f"<h2>{html.escape(name)}</h2>"]
 
     if error:
@@ -374,7 +387,9 @@ def spot_html(name, sessions, peaks, error):
             f'{s["start"]:%H:%M}–{s["end"]:%H:%M}</div>'
             f'<div class="wind">Constante {s["wind"]:.0f} kt '
             f'({s["wind_min"]:.0f}–{s["wind_max"]:.0f}) · '
-            f'Rachas {s["gust"]:.0f} kt · {s["direction"]}</div>'
+            f'Rachas {s["gust"]:.0f} kt</div>'
+            f'<div class="wind">Sensación {s["feel"]:.0f} kt · '
+            f'{s["direction"]}</div>'
             f'<div class="kite">{html.escape(kite)}</div>'
             f'</div>'
         )
@@ -386,11 +401,12 @@ def spot_html(name, sessions, peaks, error):
                 f"<tr><td>{DAYS[p['dt'].weekday()]} {p['dt'].day} · "
                 f"{p['dt']:%H:%M}</td>"
                 f"<td>{p['wind']:.0f} kt · rachas {p['gust']:.0f} kt · "
+                f"sensación {feel(p):.0f} kt · "
                 f"{compass(p['degrees'])}</td></tr>"
             )
         parts.append("</table>")
 
-    return '<section class="spot">' + "".join(parts) + "</section>"
+    return f'<section class="spot {status}">' + "".join(parts) + "</section>"
 
 
 def write_page(results, updated):

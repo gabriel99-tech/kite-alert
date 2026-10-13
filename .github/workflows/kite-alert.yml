@@ -2,7 +2,8 @@ name: Kite Alert
 
 on:
   schedule:
-    - cron: "0 */3 * * *"
+    # Cada media hora, fuera de las horas en punto para evitar retrasos.
+    - cron: "7,37 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
